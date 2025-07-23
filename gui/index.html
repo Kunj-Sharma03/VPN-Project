@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VPN Forwarder App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: url('./assets/Final.PNG') no-repeat center center fixed;
+      background-size: cover;
+      color: #eaeaea;
+      margin: 0;
+      padding: 40px 0 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    .app-container {
+      background: #1e1e1e;
+      border-radius: 16px;
+      padding: 30px;
+      width: 90%;
+      max-width: 700px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    h1 { text-align: center; margin-bottom: 30px; font-weight: 600; font-size: 24px; }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .controls button, .message-section button {
+      padding: 12px;
+      font-size: 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .controls button:hover, .message-section button:hover { background-color: #0056b3; }
+    .message-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .message-section input {
+      padding: 12px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #2c2c2c;
+      color: white;
+    }
+    .log-label { font-weight: bold; margin-bottom: 5px; }
+    .log-output {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 12px;
+      height: 250px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .footer { text-align: center; font-size: 13px; margin-top: 15px; color: #888; }
+    .status { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .status span { font-size: 14px; font-weight: 600; }
+    .status-badge {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .running { background-color: #28a745; color: white; }
+    .stopped { background-color: #dc3545; color: white; }
+    #clearOutput { margin-top: 10px; background: #6c757d; }
+    #clearOutput:hover { background: #5a6268; }
+    .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #2196F3; }
+    input:checked + .slider:before { transform: translateX(22px); }
+    body.light-mode {
+      background: url('./assets/Final.PNG') no-repeat center center fixed;
+      background-size: cover;
+      color: #111;
+    }
+    body.light-mode .app-container { background: #ffffff; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); }
+    body.light-mode .log-output { background: #f9f9f9; border: 1px solid #ccc; color: #111; }
+    body.light-mode .message-section input { background: #fff; border: 1px solid #ccc; color: #111; }
+    body.light-mode .footer { color: #444; }
+    body.light-mode .status-badge.running { background-color: #28a745; color: white; }
+    body.light-mode .status-badge.stopped { background-color: #dc3545; color: white; }
+    @media (max-width: 600px) { .controls { grid-template-columns: 1fr; } }
+    #dropZone {
+      border: 2px dashed #888;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      border-radius: 10px;
+    }
+    #dropZone:hover {
+      border-color: #00ff99;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <h1>VPN Forwarder</h1>
+    <div class="status">
+      <span>VPN: <span id="vpnStatus" class="status-badge stopped">Stopped</span></span>
+      <span>Netcat: <span id="ncStatus" class="status-badge stopped">Stopped</span></span>
+    </div>
+    <div class="controls">
+      <button id="startVPN">Start VPN (Server & Client)</button>
+      <button id="startNC">Start Netcat Echo Server</button>
+      <button id="connectVPN" style="background-color: #6f42c1;">Connect VPN</button>
+      <div style="grid-column: span 2; display: flex; align-items: center; gap: 10px;">
+        <label for="darkModeToggle" style="font-weight: 600;">Dark Mode:</label>
+        <label class="switch">
+          <input type="checkbox" id="darkModeToggle" checked>
+          <span class="slider round"></span>
+        </label>
+      </div>
+    </div>
+    <div class="message-section">
+      <input type="text" id="userInput" placeholder="Enter message to send..." />
+      <div style="display: flex; gap: 10px;">
+        <button id="sendViaSocket" style="background-color: #17a2b8;">Send via Socket</button>
+        <button id="sendViaNC" style="background-color: #ffc107; color: black;">Send via Netcat</button>
+      </div>
+    </div>
+    <button onclick="runOCRFromAsset()" style="background-color:#20c997; padding: 10px; width: 100%; margin-bottom: 10px;">Run OCR on assets/sample.jpg</button>
+    <div id="dropZone">
+      📂 Drag & Drop an Image Here for OCR
+    </div>
+    <div class="log-label">Output Log:</div>
+    <div class="log-output" id="outputArea"></div>
+    <button id="clearOutput">Clear Log</button>
+    <div class="footer">Made with ❤ using Electron + Node.js</div>
+  </div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    const path = require('path');
+    const outputArea = document.getElementById('outputArea');
+    const vpnStatus = document.getElementById('vpnStatus');
+    const ncStatus = document.getElementById('ncStatus');
+
+    document.getElementById('startVPN').addEventListener('click', () => {
+      ipcRenderer.send('start-vpn');
+      vpnStatus.textContent = 'Starting...';
+      vpnStatus.className = 'status-badge running';
+    });
+    document.getElementById('startNC').addEventListener('click', () => {
+      ipcRenderer.send('start-nc-server');
+      ncStatus.textContent = 'Starting...';
+      ncStatus.className = 'status-badge running';
+    });
+    document.getElementById('connectVPN').addEventListener('click', () => {
+      ipcRenderer.send('connect-vpn');
+    });
+    document.getElementById('sendViaSocket').addEventListener('click', () => {
+      const msg = document.getElementById('userInput').value;
+      if (msg.trim()) ipcRenderer.send('send-message-socket', msg.trim());
+    });
+    document.getElementById('sendViaNC').addEventListener('click', () => {
+      const msg = document.getElementById('userInput').value;
+      if (msg.trim()) ipcRenderer.send('send-message-nc', msg.trim());
+    });
+    document.getElementById('clearOutput').addEventListener('click', () => {
+      outputArea.textContent = '';
+    });
+    ipcRenderer.on('message-output', (event, output) => {
+      const text = typeof output === 'string' ? output : `[${output.source}] ${output.message}`;
+      outputArea.textContent += `${text}\n`;
+      outputArea.scrollTop = outputArea.scrollHeight;
+      const lower = text.toLowerCase();
+      if (lower.includes('waiting for incoming connections')) {
+        vpnStatus.textContent = 'Running';
+        vpnStatus.className = 'status-badge running';
+      }
+      if (lower.includes('server stopped') || lower.includes('exited with code')) {
+        vpnStatus.textContent = 'Stopped';
+        vpnStatus.className = 'status-badge stopped';
+      }
+      if (lower.includes('netcat') && lower.includes('listening')) {
+        ncStatus.textContent = 'Running';
+        ncStatus.className = 'status-badge running';
+      }
+    });
+    document.getElementById('darkModeToggle').addEventListener('change', () => {
+      document.body.classList.toggle('light-mode');
+    });
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#00ff99';
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = '#888';
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#888';
+      const file = e.dataTransfer.files[0];
+      if (file && file.path && /\.(png|jpg|jpeg)$/i.test(file.name)) {
+        ipcRenderer.send('ocr-dropped-image', file.path);
+      } else {
+        outputArea.textContent += `[ERROR] Not a valid image file.\n`;
+      }
+    });
+    function runOCRFromAsset() {
+  const path = require('path');
+  const assetPath = path.join(__dirname, 'assets', 'sample.jpg');
+  ipcRenderer.send('send-ocr-file', assetPath);
+}
+  </script>
+</body>
+</html>

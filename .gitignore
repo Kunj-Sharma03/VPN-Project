@@ -1,0 +1,50 @@
+# IDE files
+*.iml
+.idea/*
+.vscode/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Windows Zone.Identifier files
+*:Zone.Identifier
+
+# Compiled Java classes in source directories only (keep /out/ for GUI)
+src/**/*.class
+
+# Node.js (for GUI)
+gui/node_modules/
+gui/package-lock.json
+
+# Electron build artifacts
+gui/out/
+gui/dist/
+
+# Build directories
+target/
+build/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+plaininput
+test-input*
+
+# Certificate private keys (commented out - uncomment if you don't want to commit them)
+CAPrivateKey.*
+# *.key
+# *privatekey*
+
+# Maven/Gradle (if added later)
+.mvn/
+.gradle/
